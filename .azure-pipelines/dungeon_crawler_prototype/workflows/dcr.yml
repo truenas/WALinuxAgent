@@ -6,6 +6,19 @@ trigger:
 pr:
   - develop
 
+parameters:
+  - name: agentVersion
+    displayName: Guest Agent Version
+    type: string
+    default: "9.9.9.9"
+
+variables:
+  ${{ if contains( variables['Build.SourceBranchName'], 'release-' ) }}:
+    agentVersion: ${{ replace(variables['Build.SourceBranchName'], 'release-', '') }}
+  ${{ if eq( variables['Build.SourceBranchName'], 'develop') }}:
+    agentVersion: "9.9.9.9"
+  agentVersion: ${{ coalesce(variables['agentVersion'], parameters['agentVersion']) }}
+  
 
 jobs:
 
@@ -28,8 +41,9 @@ jobs:
 
   - script: |
       sudo ./makepkg.py
-      sudo cp ./eggs/WALinuxAgent-9.9.9.9.zip /var/lib/waagent/
+      sudo cp ./eggs/WALinuxAgent-${{variables['agentVersion']}}.zip /var/lib/waagent/
       sudo systemctl stop walinuxagent
-      sudo unzip /var/lib/waagent/WALinuxAgent-9.9.9.9.zip -d /var/lib/waagent/WALinuxAgent-9.9.9.9
-      sudo systemctl start walinuxagent
-      systemctl status walinuxagent
+      sudo unzip /var/lib/waagent/WALinuxAgent-${{variables['agentVersion']}}.zip \
+        -d /var/lib/waagent/WALinuxAgent-${{variables['agentVersion']}}
+      sudo systemctl daemon-reload && sudo systemctl start walinuxagent
+    displayName: "Install latest"
