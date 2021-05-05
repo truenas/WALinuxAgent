@@ -47,6 +47,11 @@ jobs:
       sudo systemctl daemon-reload && sudo systemctl start walinuxagent
     displayName: "Install latest WALinuxAgent from source"
 
+  - script: |
+      which waagent
+      wagent -version
+    displayName: "Debug"
+
   - task: PythonScript@0
     inputs:
       scriptSource: 'filePath'
