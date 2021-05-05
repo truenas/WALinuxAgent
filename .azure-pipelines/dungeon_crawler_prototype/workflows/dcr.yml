@@ -18,7 +18,6 @@ variables:
   ${{ if eq( variables['Build.SourceBranchName'], 'develop') }}:
     agentVersion: "9.9.9.9"
   agentVersion: ${{ coalesce(variables['agentVersion'], parameters['agentVersion']) }}
-  
 
 jobs:
 
@@ -46,4 +45,10 @@ jobs:
       sudo unzip /var/lib/waagent/WALinuxAgent-${{variables['agentVersion']}}.zip \
         -d /var/lib/waagent/WALinuxAgent-${{variables['agentVersion']}}
       sudo systemctl daemon-reload && sudo systemctl start walinuxagent
-    displayName: "Install latest"
+    displayName: "Install latest WALinuxAgent from source"
+
+  - task: PythonScript@0
+    inputs:
+      scriptSource: 'filePath'
+      scriptPath: '.azure-pipelines/dungeon_crawler_prototype/src/01_check_waagent_version.py'
+
