@@ -30,7 +30,7 @@ jobs:
 
   - task: UsePythonVersion@0
     inputs:
-      specificVersion: '2.7'
+      versionSpec: '3.6'
 
   - script: python -m pip install --upgrade pip setuptools wheel
     displayName: 'Install Pip Tools'
