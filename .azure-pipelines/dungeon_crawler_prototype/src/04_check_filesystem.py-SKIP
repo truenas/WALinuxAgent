@@ -1,0 +1,161 @@
+#
+# 10/1/2020 - This test has been failing for a few weeks. It is part of the provisioning code and the PA team is following up.
+#             Please re-enable the test when the issue is addressed or feel free to remove it entirely if there is no
+#             resolution within, let's say 3 or 4 weeks.
+#
+import subprocess
+import sys
+import os
+
+resource_disk = None
+agent_config = None
+
+
+def read_file(filename):
+    content = None
+    with open(filename, 'r') as fh:
+        content = fh.readlines()
+    if content is None:
+        print('file could not be read')
+        sys.exit(1)
+    return content
+
+
+def get_agent_config():
+    path = '/etc/waagent.conf'
+    if not os.path.exists(path):
+        path = '/usr/share/oem/waagent.conf'
+    if not os.path.exists(path):
+        print('agent config not found')
+        sys.exit(1)
+
+    config = {}
+    config_text = read_file(path)
+    for entry in [x.strip().split()[0] for x in config_text
+                      if not x.startswith('#')
+                      and not x.startswith('\n')]:
+        try:
+            k, v = entry.split('=')
+            config.setdefault(k, v)
+        except:
+            pass
+    return config
+
+
+def run_get_output(cmd):
+    pipe = subprocess.Popen(cmd.split(' '),
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    stdout_lines = map(lambda s: s.decode('utf-8'), pipe.stdout.readlines())
+    exit_code = pipe.wait()
+    if exit_code != 0:
+        sys.exit(exit_code)
+    return list(stdout_lines)
+
+
+def check_mtab():
+    global resource_disk
+    global agent_config
+
+    resource_disk_mount_point = agent_config['ResourceDisk.MountPoint']
+    print('mount point: {0}'.format(resource_disk_mount_point))
+
+    os_disk_found = False
+    resource_disk_found = False
+    for line in read_file('/etc/mtab'):
+        if '/dev/sd' in line:
+            if resource_disk_mount_point in line:
+                resource_disk = line.split(' ')[0]
+                print('resource disk: {0}'.format(resource_disk))
+                resource_disk_found = True
+            else:
+                os_disk = line.split(' ')[0]
+                print('os disk: {0}'.format(os_disk))
+                os_disk_found = True
+    return os_disk_found and resource_disk_found
+
+
+def check_resource_disk():
+    global resource_disk
+    global agent_config
+
+    if resource_disk is None:
+        print('resource disk not found')
+        return False
+
+    fs_match = False
+    expected_fs = agent_config['ResourceDisk.Filesystem']
+    for line in run_get_output('mount'):
+        if resource_disk in line:
+            fs = line.split(' ')[4]
+            print('fs: {0}'.format(fs))
+            if fs != expected_fs:
+                print('expected filesystem [{0}], actual filesystem[{1}]'
+                      .format(expected_fs, fs))
+            else:
+                fs_match = True
+    return fs_match
+
+
+def check_swap():
+    swap_enabled = False
+    swap_output = run_get_output('swapon -s')[1:]
+    for line in swap_output:
+        swap_enabled |= "swapfile" in line
+
+    lsblk_output = run_get_output('lsblk')
+    swap_enabled |= "SWAP" in lsblk_output
+    swap_expected = agent_config['ResourceDisk.EnableSwap'] == 'y'
+    swap_valid = swap_expected == swap_enabled
+
+    print('swap configured: {0}'.format(swap_expected))
+    print('swap enabled: {0}'.format(swap_enabled))
+
+    if not swap_valid:
+        print('swapon -s: {0}'.format(swap_output))
+        print('lsblk: {0}'.format(lsblk_output))
+
+    if swap_expected:
+        config_mount_point = agent_config['ResourceDisk.MountPoint']
+        config_swap_size = agent_config['ResourceDisk.SwapSizeMB']
+        expected_swapfile = os.path.join(config_mount_point, 'swapfile')
+
+        if not os.path.exists(expected_swapfile):
+            print('swap file {0} not found'.format(expected_swapfile))
+            swap_valid = False
+        else:
+            print('swap file exists: {0}'.format(expected_swapfile))
+            actual_size = os.path.getsize(expected_swapfile)
+            expected_size = int(config_swap_size) * 1024 * 1024
+            if actual_size != expected_size:
+                print('swap file size {0} is not correct, expected {1}'
+                      .format(actual_size, expected_size))
+                swap_valid = False
+            else:
+                print('swap file matches expected size: {0}'
+                      .format(expected_size))
+    return swap_valid
+
+
+def main():
+    global agent_config
+
+    agent_config = get_agent_config()
+
+    if not check_mtab():
+        print('check_mtab failed')
+        sys.exit(1)
+
+    if not check_resource_disk():
+        print('check_resource_disk failed')
+        sys.exit(2)
+
+    if not check_swap():
+        print('check_swap failed')
+        sys.exit(3)
+
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

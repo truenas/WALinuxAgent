@@ -1,0 +1,35 @@
+trigger:
+  - develop
+  - dcr_azure-pipelines_prototype
+  - releases/*
+
+pr:
+  - develop
+
+
+jobs:
+
+  - job: "DCR"
+  pool:
+    vmImage: "ubuntu-16.04"
+
+  steps:
+  - checkout: self
+
+  - task: UsePythonVersion@0
+    inputs:
+      specificVersion: '3.6'
+
+  - script: python -m pip install --upgrade pip setuptools wheel
+    displayName: 'Install Pip Tools'
+  
+  - script: python -m pip install -r requirements.txt
+    displayName: 'Install WALinuxAgent dependencies'
+
+  - script: |
+      sudo ./makepkg.py
+      sudo cp ./eggs/WALinuxAgent-9.9.9.9.zip /var/lib/waagent/
+      sudo systemctl stop walinuxagent
+      sudo unzip /var/lib/waagent/WALinuxAgent-9.9.9.9.zip -d /var/lib/waagent/WALinuxAgent-9.9.9.9
+      sudo systemctl start walinuxagent
+      systemctl status walinuxagent
