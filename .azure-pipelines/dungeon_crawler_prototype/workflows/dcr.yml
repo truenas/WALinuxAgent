@@ -48,8 +48,8 @@ jobs:
     displayName: "Install latest WALinuxAgent from source"
 
   - script: |
-      which waagent
-      waagent -version
+    ls /usr/lib/python3/dist-packages/azurelinuxagent/
+    python -vvv -c "import azurelinuxagent" 2>&1 | grep -vE "(clear)|(destroy)|(cleanup)"
     displayName: "Debug"
 
   - task: PythonScript@0
