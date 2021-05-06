@@ -9,7 +9,7 @@ if sys.version_info[0]== 3:
 elif sys.version_info[0] == 2:
     import httplib as httpclient
 
-FIREWALL_USER = 'edp'
+FIREWALL_USER = 'vsts'
 WIRESERVER_ENDPOINT_FILE = '/var/lib/waagent/WireServerEndpoint'
 VERSIONS_PATH = '/?comp=versions'
 

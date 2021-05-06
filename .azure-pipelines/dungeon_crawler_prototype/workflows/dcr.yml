@@ -28,6 +28,10 @@ jobs:
   steps:
   - checkout: self
 
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.6'
+
   - script: python -m pip install --upgrade pip setuptools wheel
     displayName: 'Install Pip Tools'
   
@@ -42,15 +46,30 @@ jobs:
         -d /var/lib/waagent/WALinuxAgent-${{variables['agentVersion']}}
       sudo systemctl daemon-reload && sudo systemctl start walinuxagent
     displayName: "Install latest WALinuxAgent from source"
+  
+  - script: |
+      PROTOTYPE_DIR="$(pwd)/.azure-pipelines/dungeon_crawler_prototype"
+      echo "##vso[task.setvariable variable=PYTHONPATH]$PYTHONPATH:/usr/lib/python3/dist-packages/:$PROTOTYPE_DIR/"
+    displayName: "Update PYTHONPATH"
 
   - script: |
-      python -vvv -c "import azurelinuxagent" 2>&1 | grep -vE "(clear)|(destroy)|(cleanup)"
-      waagent -version
-    displayName: "Debug"
-  
+      whoami
+    displayName: "Display Debug Info"
 
-  - task: PythonScript@0
-    inputs:
-      scriptSource: 'filePath'
-      scriptPath: '.azure-pipelines/dungeon_crawler_prototype/src/01_check_waagent_version.py'
+  - bash: |
+      PROTOTYPE_DIR="$(pwd)/.azure-pipelines/dungeon_crawler_prototype"
+      AGENT_BVT_DIR="dungeon_crawler/scenarios/agent-bvt"
+
+      exitcode=0
+
+      ls -1 "$PROTOTYPE_DIR/$AGENT_BVT_DIR/" | while read script; do
+        [[ $script == *SKIP ]] && continue
+        $PROTOTYPE_DIR/workflows/run_script.sh "$PROTOTYPE_DIR/$AGENT_BVT_DIR/$script"
+        __exitcode=$?
+        ((exitcode += __exitcode))
+        echo "$__exitcode, $exitcode"
+      done
+
+      exit $exitcode
+    displayName: "Run All Scripts"
 

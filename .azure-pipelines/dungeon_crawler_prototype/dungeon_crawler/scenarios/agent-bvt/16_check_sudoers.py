@@ -6,7 +6,7 @@ def main():
     found = False
     exit_code = 0
     root = '/etc/sudoers.d/'
-    user = 'edp'
+    user = 'vsts'
 
     for f in os.listdir(root):
         sudoers = os.path.join(root, f)
