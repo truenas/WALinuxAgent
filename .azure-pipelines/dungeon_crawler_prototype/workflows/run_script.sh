@@ -22,6 +22,6 @@ fi
 echo -e "${RED}Script $script_name Failed:${NC}"
 echo "======================================"
 echo "$script_output"
-echo -e "======================================\n"
+echo "======================================"
 
 exit $script_exitcode

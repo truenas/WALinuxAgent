@@ -35,7 +35,8 @@ jobs:
   - script: python -m pip install --upgrade pip setuptools wheel
     displayName: 'Install Pip Tools'
   
-  - script: python -m pip install -r requirements.txt
+  - script: |
+      python -m pip install -r requirements.txt
     displayName: 'Install WALinuxAgent dependencies'
 
   - script: |
@@ -52,24 +53,16 @@ jobs:
       echo "##vso[task.setvariable variable=PYTHONPATH]$PYTHONPATH:/usr/lib/python3/dist-packages/:$PROTOTYPE_DIR/"
     displayName: "Update PYTHONPATH"
 
-  - script: |
-      whoami
-    displayName: "Display Debug Info"
-
   - bash: |
       PROTOTYPE_DIR="$(pwd)/.azure-pipelines/dungeon_crawler_prototype"
       AGENT_BVT_DIR="dungeon_crawler/scenarios/agent-bvt"
 
       exitcode=0
-
       ls -1 "$PROTOTYPE_DIR/$AGENT_BVT_DIR/" | while read script; do
         [[ $script == *SKIP ]] && continue
         $PROTOTYPE_DIR/workflows/run_script.sh "$PROTOTYPE_DIR/$AGENT_BVT_DIR/$script"
-        __exitcode=$?
-        ((exitcode += __exitcode))
-        echo "$__exitcode, $exitcode"
+        ((exitcode += $?))
       done
-
       exit $exitcode
     displayName: "Run All Scripts"
 
