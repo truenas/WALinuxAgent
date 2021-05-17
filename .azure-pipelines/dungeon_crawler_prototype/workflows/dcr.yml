@@ -71,11 +71,13 @@ jobs:
       PROTOTYPE_DIR="$(pwd)/.azure-pipelines/dungeon_crawler_prototype"
       NOSETESTS_DIR="dungeon_crawler/scenarios/nosetests-prototype"
 
-      nosetests --with-xunit "$PROTOTYPE_DIR/$NOSETESTS_DIR"
+      pytest --junitxml=TEST-PROTOTYPE.xml "$PROTOTYPE_DIR/$NOSETESTS_DIR"
     displayName: "Run nosetests script"
 
+  - bash: ls .
+    displayName: "debug"
+    condition: succeededOrFailed()
+
   - task: PublishTestResults@2
-    inputs:
-      testResultsFormat: "xUnit"
-      testResultsFiles: "./nosetests.xml"
+    condition: succeededOrFailed()
 
