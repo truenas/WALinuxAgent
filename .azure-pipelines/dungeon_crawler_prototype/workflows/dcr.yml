@@ -37,6 +37,7 @@ jobs:
   
   - script: |
       python -m pip install -r requirements.txt
+      python -m pip install -r dcr-requirements.txt
     displayName: 'Install WALinuxAgent dependencies'
 
   - script: |
@@ -64,5 +65,17 @@ jobs:
         ((exitcode += $?))
       done
       exit $exitcode
-    displayName: "Run All Scripts"
+    displayName: "Run Agent-BVT Scripts"
+
+  - bash: |
+      PROTOTYPE_DIR="$(pwd)/.azure-pipelines/dungeon_crawler_prototype"
+      NOSETESTS_DIR="dungeon_crawler/scenarios/nosetests-prototype"
+
+      nosetests --with-xunit "$PROTOTYPE_DIR/$NOSETESTS_DIR"
+    displayName: "Run nosetests script"
+
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFormat: "xUnit"
+      testResultsFiles: "./nosetests.xml"
 
